@@ -3,9 +3,9 @@ import re
 
 
 ################################################################
-description = ""
-install_requires = []
-packages_include = ('',)
+description = "Slack Handler"
+install_requires = ["requests"]
+packages_include = ('ExecSlack',)
 author = "Supplayer"
 author_email = "x254724521@hotmail.com"
 python_requires = ">=3.6"
