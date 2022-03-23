@@ -35,11 +35,12 @@ class Basic:
             params['cursor'] = data['response_metadata'].get("next_cursor", '')
 
     @classmethod
-    def _check_status(cls, res):
+    def _check_status(cls, res, is_log=False):
         if res.get('error'):
             raise ValueError(res)
         else:
-            logger.info(res)
+            if is_log:
+                logger.info(res)
             return res
 
 
@@ -75,16 +76,16 @@ class Chat(Basic):
         super().__init__(token)
         self.__conversations = conversations
 
-    def delete(self, channel_id, ts, as_user=True):
+    def delete(self, channel_id, ts, as_user=True, is_log=True):
         url = 'https://slack.com/api/chat.delete'
         params = dict(channel=channel_id, ts=ts, as_user=as_user)
-        return self._check_status(self._session.post(url, params=params).json())
+        return self._check_status(self._session.post(url, params=params).json(), is_log)
 
-    def clear(self, channel_id, **del_time_offset):
+    def clear(self, channel_id, is_log=True, **del_time_offset):
         del_time_offset = del_time_offset or {"days": 90}
         latest = datetime.now().timestamp() - timedelta(**del_time_offset).total_seconds()
         for i in self.__conversations.history(channel_id, latest=latest):
-            self.delete(channel_id, i['ts'])
+            self.delete(channel_id, i['ts'], is_log)
 
 
 class Slack:
