@@ -1,5 +1,6 @@
 from requests import Session
 from datetime import datetime, timedelta
+from time import sleep
 import logging
 
 
@@ -35,9 +36,13 @@ class Basic:
             params['cursor'] = data['response_metadata'].get("next_cursor", '')
 
     @classmethod
-    def _check_status(cls, res, is_log=False):
+    def _check_status(cls, res, is_log=False, retry_error=('ratelimited',), retry_sleep=30):
         if res.get('error'):
-            raise ValueError(res)
+            if res['error'] in retry_error:
+                logger.warning(res)
+                sleep(retry_sleep)
+            else:
+                raise ValueError(res)
         else:
             if is_log:
                 logger.info(res)
@@ -76,16 +81,16 @@ class Chat(Basic):
         super().__init__(token)
         self.__conversations = conversations
 
-    def delete(self, channel_id, ts, as_user=True, is_log=True):
+    def delete(self, channel_id, ts, is_log=True, retry_error=('ratelimited',), retry_sleep=30, as_user=True):
         url = 'https://slack.com/api/chat.delete'
         params = dict(channel=channel_id, ts=ts, as_user=as_user)
-        return self._check_status(self._session.post(url, params=params).json(), is_log)
+        return self._check_status(self._session.post(url, params=params).json(), is_log, retry_error, retry_sleep)
 
-    def clear(self, channel_id, is_log=True, **del_time_offset):
+    def clear(self, channel_id, is_log=True, retry_error=('ratelimited',), retry_sleep=30, **del_time_offset):
         del_time_offset = del_time_offset or {"days": 90}
         latest = datetime.now().timestamp() - timedelta(**del_time_offset).total_seconds()
         for i in self.__conversations.history(channel_id, latest=latest):
-            self.delete(channel_id, i['ts'], is_log)
+            self.delete(channel_id, i['ts'], is_log, retry_error, retry_sleep)
 
 
 class Slack:
